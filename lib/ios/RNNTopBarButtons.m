@@ -1,4 +1,4 @@
-#import "RNNNavigationButtons.h"
+#import "RNNTopBarButtons.h"
 #import "RNNUIBarButtonItem.h"
 #import <React/RCTConvert.h>
 #import "RCTHelpers.h"
@@ -7,7 +7,7 @@
 #import "UIImage+insets.h"
 #import "UIViewController+LayoutProtocol.h"
 
-@interface RNNNavigationButtons()
+@interface RNNTopBarButtons()
 
 @property (weak, nonatomic) UIViewController<RNNLayoutProtocol>* viewController;
 @property (strong, nonatomic) RNNButtonOptions* defaultLeftButtonStyle;
@@ -15,14 +15,12 @@
 @property (strong, nonatomic) RNNReactComponentRegistry* componentRegistry;
 @end
 
-@implementation RNNNavigationButtons
+@implementation RNNTopBarButtons
 
 -(instancetype)initWithViewController:(UIViewController<RNNLayoutProtocol>*)viewController componentRegistry:(id)componentRegistry {
 	self = [super init];
-	
 	self.viewController = viewController;
 	self.componentRegistry = componentRegistry;
-	
 	return self;
 }
 
@@ -40,10 +38,30 @@
 
 -(void)setButtons:(NSArray*)buttons side:(NSString*)side animated:(BOOL)animated defaultStyle:(RNNButtonOptions *)defaultStyle insets:(UIEdgeInsets)insets {
 	NSMutableArray *barButtonItems = [NSMutableArray new];
+//    NSMutableArray<RNNUIBarButtonItem *> *currentButtons = ([side isEqualToString:@"left"] ? self.viewController.navigationItem.leftBarButtonItems : self.viewController.navigationItem.rightBarButtonItems).mutableCopy;
 	NSArray* resolvedButtons = [self resolveButtons:buttons];
 	for (NSDictionary *button in resolvedButtons) {
 		RNNUIBarButtonItem* barButtonItem = [self buildButton:button defaultStyle:defaultStyle insets:insets];
-		if(barButtonItem) {
+//        [currentButtons enumerateObjectsUsingBlock:^(RNNUIBarButtonItem *button, NSUInteger idx, BOOL *stop) {
+//            if (button.buttonId == barButtonItem.buttonId) {
+//                [button.customView.superview.constraints enumerateObjectsUsingBlock:^(__kindof NSLayoutConstraint *constraint, NSUInteger idx, BOOL *stop) {
+//                    if (constraint.firstItem == button || constraint.secondItem == button) {
+//                        constraint.active = NO;
+//                    }
+//                }];
+//                [button.customView.constraints enumerateObjectsUsingBlock:^(__kindof NSLayoutConstraint *constraint, NSUInteger idx, BOOL *stop) {
+//					constraint.active = NO;
+//				}];
+//				[button.customView removeFromSuperview];
+//
+//
+//				[currentButtons removeObject:button];
+//                barButtonItem = button;
+//            }
+//        }];
+
+
+        if(barButtonItem) {
 			[barButtonItems addObject:barButtonItem];
 		}
 		UIColor* color = [self color:[RCTConvert UIColor:button[@"color"]] defaultColor:[defaultStyle.color getWithDefaultValue:nil]];
@@ -103,7 +121,12 @@
 		componentOptions.name = [[Text alloc] initWithValue:component[@"name"]];
 		
 		RNNReactView *view = [_componentRegistry createComponentIfNotExists:componentOptions parentComponentId:self.viewController.layoutInfo.componentId reactViewReadyBlock:nil];
-		barButtonItem = [[RNNUIBarButtonItem alloc] init:buttonId withCustomView:view componentRegistry:_componentRegistry];
+		[view.constraints enumerateObjectsUsingBlock:^(__kindof NSLayoutConstraint *obj, NSUInteger idx, BOOL *stop) {
+                obj.active = NO;
+		}];
+        [view removeFromSuperview];
+
+        barButtonItem = [[RNNUIBarButtonItem alloc] init:buttonId withCustomView:view componentRegistry:_componentRegistry];
 	} else if (iconImage) {
 		barButtonItem = [[RNNUIBarButtonItem alloc] init:buttonId withIcon:iconImage];
 	} else if (title) {
@@ -131,11 +154,11 @@
 	
 	if (!enabledBool && disabledColor) {
 		color = disabledColor;
-		[disabledTextAttributes setObject:disabledColor forKey:NSForegroundColorAttributeName];
+		disabledTextAttributes[NSForegroundColorAttributeName] = disabledColor;
 	}
 	
 	if (color) {
-		[textAttributes setObject:color forKey:NSForegroundColorAttributeName];
+		textAttributes[NSForegroundColorAttributeName] = color;
 		[barButtonItem setImage:[[iconImage withTintColor:color] imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal]];
 		barButtonItem.tintColor = color;
 	}
@@ -148,16 +171,15 @@
 	} else {
 		font = [UIFont systemFontOfSize:[fontSize floatValue]];
 	}
-	[textAttributes setObject:font forKey:NSFontAttributeName];
-	[disabledTextAttributes setObject:font forKey:NSFontAttributeName];
+	textAttributes[NSFontAttributeName] = font;
+	disabledTextAttributes[NSFontAttributeName] = font;
 	
 	[barButtonItem setTitleTextAttributes:textAttributes forState:UIControlStateNormal];
 	[barButtonItem setTitleTextAttributes:textAttributes forState:UIControlStateHighlighted];
 	[barButtonItem setTitleTextAttributes:disabledTextAttributes forState:UIControlStateDisabled];
 	
 	NSString *testID = dictionary[@"testID"];
-	if (testID)
-	{
+	if (testID) {
 		barButtonItem.accessibilityIdentifier = testID;
 	}
 	
